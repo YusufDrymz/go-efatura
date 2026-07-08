@@ -331,6 +331,10 @@ func (b *InvoiceBuilder) Build() (*Invoice, error) {
 	inv.AccountingSupplierParty = SupplierParty{Party: b.supplier.toParty()}
 	inv.AccountingCustomerParty = CustomerParty{Party: b.customer.toParty()}
 
+	// UBLExtensions kilavuzda zorunlu (1..n): XAdES buraya yazilir. Imzasiz
+	// uretimde GIB ornekleri gibi bos placeholder birakilir, imzaci doldurur.
+	inv.UBLExtensions = &UBLExtensions{Extensions: []UBLExtension{{}}}
+
 	// imza blogu: belge imzasiz uretilse de cac:Signature zorunlu (1..n);
 	// GIB ornekleriyle ayni desen, imzanin kendisi sign katmaninin isi.
 	inv.Signatures = []Signature{{
