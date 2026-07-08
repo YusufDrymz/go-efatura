@@ -1,3 +1,4 @@
 ubltr/testdata/** -text
 validate/xsd/** -text
 sign/testdata/** -text
+envelope/testdata/** -text
