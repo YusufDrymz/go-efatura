@@ -1,1 +1,2 @@
 ubltr/testdata/** -text
+validate/xsd/** -text
