@@ -102,6 +102,7 @@ type DocumentReference struct {
 	DocumentTypeCode    string `xml:"cbc:DocumentTypeCode,omitempty"`
 	DocumentType        string `xml:"cbc:DocumentType,omitempty"`
 	DocumentDescription string `xml:"cbc:DocumentDescription,omitempty"`
+	IssuerParty         *Party `xml:"cac:IssuerParty,omitempty"` // orn. istisna belgesini veren kurum
 	// TODO: Attachment (base64 gomulu belge)
 }
 
@@ -120,9 +121,31 @@ type ExternalReference struct {
 }
 
 type Delivery struct {
-	ActualDeliveryDate string   `xml:"cbc:ActualDeliveryDate,omitempty"`
-	DeliveryAddress    *Address `xml:"cac:DeliveryAddress,omitempty"`
-	// TODO: Shipment (ihracat/istisna faturalarinda navlun-sigorta burada)
+	ID                 *ID             `xml:"cbc:ID,omitempty"`
+	ActualDeliveryDate string          `xml:"cbc:ActualDeliveryDate,omitempty"`
+	ActualDeliveryTime string          `xml:"cbc:ActualDeliveryTime,omitempty"`
+	DeliveryAddress    *Address        `xml:"cac:DeliveryAddress,omitempty"`
+	CarrierParty       *Party          `xml:"cac:CarrierParty,omitempty"`
+	DeliveryTerms      []DeliveryTerms `xml:"cac:DeliveryTerms,omitempty"`
+	Shipment           *Shipment       `xml:"cac:Shipment,omitempty"`
+}
+
+type DeliveryTerms struct {
+	ID ID `xml:"cbc:ID"` // teslim sekli (INCOTERMS, orn. CIF)
+}
+
+// Shipment tasima bilgisi. Ihracat/istisna faturalarinda navlun
+// (DeclaredForCarriageValueAmount) ve sigorta (InsuranceValueAmount) burada
+// tasinir ve GIB ornekleri bunlari belge toplamina dahil eder.
+type Shipment struct {
+	ID                                 ID        `xml:"cbc:ID"`
+	GrossWeightMeasure                 *Quantity `xml:"cbc:GrossWeightMeasure,omitempty"`
+	NetWeightMeasure                   *Quantity `xml:"cbc:NetWeightMeasure,omitempty"`
+	TotalTransportHandlingUnitQuantity *Dec      `xml:"cbc:TotalTransportHandlingUnitQuantity,omitempty"`
+	InsuranceValueAmount               *Amount   `xml:"cbc:InsuranceValueAmount,omitempty"`
+	DeclaredCustomsValueAmount         *Amount   `xml:"cbc:DeclaredCustomsValueAmount,omitempty"`
+	DeclaredForCarriageValueAmount     *Amount   `xml:"cbc:DeclaredForCarriageValueAmount,omitempty"`
+	// TODO: GoodsItem, ShipmentStage, TransportHandlingUnit (e-irsaliye isleri)
 }
 
 type PaymentMeans struct {
@@ -134,9 +157,19 @@ type PaymentMeans struct {
 }
 
 type FinancialAccount struct {
-	ID           string `xml:"cbc:ID"` // IBAN
-	CurrencyCode string `xml:"cbc:CurrencyCode,omitempty"`
-	PaymentNote  string `xml:"cbc:PaymentNote,omitempty"`
+	ID                         string                      `xml:"cbc:ID"` // IBAN
+	CurrencyCode               string                      `xml:"cbc:CurrencyCode,omitempty"`
+	PaymentNote                string                      `xml:"cbc:PaymentNote,omitempty"`
+	FinancialInstitutionBranch *FinancialInstitutionBranch `xml:"cac:FinancialInstitutionBranch,omitempty"`
+}
+
+type FinancialInstitutionBranch struct {
+	Name                 string                `xml:"cbc:Name,omitempty"` // sube
+	FinancialInstitution *FinancialInstitution `xml:"cac:FinancialInstitution,omitempty"`
+}
+
+type FinancialInstitution struct {
+	Name string `xml:"cbc:Name,omitempty"` // banka
 }
 
 type PaymentTerms struct {

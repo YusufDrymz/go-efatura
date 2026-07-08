@@ -20,9 +20,23 @@ type Party struct {
 	PartyName                  *PartyName            `xml:"cac:PartyName,omitempty"`
 	PostalAddress              Address               `xml:"cac:PostalAddress"`
 	PartyTaxScheme             *PartyTaxScheme       `xml:"cac:PartyTaxScheme,omitempty"`
+	PartyLegalEntities         []PartyLegalEntity    `xml:"cac:PartyLegalEntity,omitempty"`
 	Contact                    *Contact              `xml:"cac:Contact,omitempty"`
 	Person                     *Person               `xml:"cac:Person,omitempty"`
-	// TODO: PhysicalLocation, PartyLegalEntity, AgentParty (sube)
+	AgentParty                 *Party                `xml:"cac:AgentParty,omitempty"` // sube
+	// TODO: PhysicalLocation (depo)
+}
+
+type PartyLegalEntity struct {
+	RegistrationName            string                       `xml:"cbc:RegistrationName,omitempty"`
+	CompanyID                   string                       `xml:"cbc:CompanyID,omitempty"` // ticaret sicil no
+	CorporateRegistrationScheme *CorporateRegistrationScheme `xml:"cac:CorporateRegistrationScheme,omitempty"`
+	HeadOfficeParty             *Party                       `xml:"cac:HeadOfficeParty,omitempty"` // merkez (sube faturalarinda)
+}
+
+type CorporateRegistrationScheme struct {
+	ID   string `xml:"cbc:ID,omitempty"` // sicil merci (orn. Ticaret Odasi)
+	Name string `xml:"cbc:Name,omitempty"`
 }
 
 type PartyIdentification struct {
