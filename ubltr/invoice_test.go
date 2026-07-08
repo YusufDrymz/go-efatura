@@ -70,17 +70,18 @@ func TestParseInvoiceTemelFatura(t *testing.T) {
 // olmali ve orijinaldeki dolu elemanlarin hicbiri kaybolmamali. GIB
 // orijinaliyle bayt esitligi hedef degil (imza/xsi anotasyonlari korunmuyor);
 // "bos eleman == yok" sayilir, cunku omitempty bos opsiyonelleri yazmaz.
+var gibSamples = []string{
+	"satis-temelfatura.xml",
+	"satis-ticarifatura.xml",
+	"iade-ticarifatura.xml",
+	"tevkifat-ticarifatura.xml",
+	"istisna-usd-ticarifatura.xml",
+	"istisna2-ticarifatura.xml",
+	"ozelmatrah-ticarifatura.xml",
+}
+
 func TestInvoiceRoundTrip(t *testing.T) {
-	files := []string{
-		"satis-temelfatura.xml",
-		"satis-ticarifatura.xml",
-		"iade-ticarifatura.xml",
-		"tevkifat-ticarifatura.xml",
-		"istisna-usd-ticarifatura.xml",
-		"istisna2-ticarifatura.xml",
-		"ozelmatrah-ticarifatura.xml",
-	}
-	for _, name := range files {
+	for _, name := range gibSamples {
 		t.Run(name, func(t *testing.T) {
 			data := readFixture(t, name)
 			inv, err := ParseInvoice(data)
@@ -104,9 +105,9 @@ func TestInvoiceRoundTrip(t *testing.T) {
 	}
 }
 
-// elementCounts belge icindeki dolu elemanlari sayar. Imza icerigi
-// (ext:ExtensionContent alti) ve bilinmeyen namespace'ler atlanir; attr'siz,
-// cocuksuz, metinsiz bos yaprak elemanlar sayilmaz.
+// elementCounts belge icindeki dolu elemanlari sayar. Imza tarafi
+// (ext:UBLExtensions alti, korunmuyor) ve bilinmeyen namespace'ler atlanir;
+// attr'siz, cocuksuz, metinsiz bos yaprak elemanlar sayilmaz.
 func elementCounts(t *testing.T, data []byte) map[string]int {
 	t.Helper()
 	type elem struct {
@@ -125,7 +126,7 @@ func elementCounts(t *testing.T, data []byte) map[string]int {
 		require.NoError(t, err)
 		switch e := tok.(type) {
 		case xml.StartElement:
-			if skip > 0 || e.Name.Space != "" || e.Name.Local == "ext:ExtensionContent" {
+			if skip > 0 || e.Name.Space != "" || e.Name.Local == "ext:UBLExtensions" {
 				skip++
 				continue
 			}

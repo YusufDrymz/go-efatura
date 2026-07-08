@@ -14,17 +14,17 @@ type Invoice struct {
 	XMLNSCBC string `xml:"xmlns:cbc,attr,omitempty"`
 	XMLNSEXT string `xml:"xmlns:ext,attr,omitempty"`
 
-	UBLExtensions   *UBLExtensions `xml:"ext:UBLExtensions,omitempty"`
-	UBLVersionID    string         `xml:"cbc:UBLVersionID"`    // "2.1"
-	CustomizationID string         `xml:"cbc:CustomizationID"` // "TR1.2"
-	ProfileID       string         `xml:"cbc:ProfileID"`
-	ID              string         `xml:"cbc:ID"`
-	CopyIndicator   bool           `xml:"cbc:CopyIndicator"`
-	UUID            string         `xml:"cbc:UUID"` // ETTN
-	IssueDate       string         `xml:"cbc:IssueDate"`
-	IssueTime       string         `xml:"cbc:IssueTime,omitempty"`
-	InvoiceTypeCode string         `xml:"cbc:InvoiceTypeCode"`
-	Notes           []string       `xml:"cbc:Note,omitempty"`
+	UBLExtensions   UBLExtensions `xml:"ext:UBLExtensions"`
+	UBLVersionID    string        `xml:"cbc:UBLVersionID"`    // "2.1"
+	CustomizationID string        `xml:"cbc:CustomizationID"` // "TR1.2"
+	ProfileID       string        `xml:"cbc:ProfileID"`
+	ID              string        `xml:"cbc:ID"`
+	CopyIndicator   bool          `xml:"cbc:CopyIndicator"`
+	UUID            string        `xml:"cbc:UUID"` // ETTN
+	IssueDate       string        `xml:"cbc:IssueDate"`
+	IssueTime       string        `xml:"cbc:IssueTime,omitempty"`
+	InvoiceTypeCode string        `xml:"cbc:InvoiceTypeCode"`
+	Notes           []string      `xml:"cbc:Note,omitempty"`
 
 	DocumentCurrencyCode           string `xml:"cbc:DocumentCurrencyCode"`
 	TaxCurrencyCode                string `xml:"cbc:TaxCurrencyCode,omitempty"`
@@ -64,18 +64,41 @@ type Invoice struct {
 	InvoiceLines         []InvoiceLine `xml:"cac:InvoiceLine"`
 }
 
-type UBLExtensions struct {
-	Extensions []UBLExtension `xml:"ext:UBLExtension"`
+// UBLExtensions imza tasiyicisidir ve GIB XSD'sinde zorunludur; ustelik
+// ExtensionContent en az bir yabanci-namespace cocuk ister (lax wildcard —
+// bos ds:Signature bile gecmez, sema sette oldugu icin dogrulanir). Bu
+// yuzden marshal her zaman asagidaki placeholder'i yazar; imza katmani onu
+// gercek XAdES icerigiyle degistirir. Parse icerigi atlar: imza baytlari
+// nesne modeli uzerinden korunamaz (yeniden uretim imzayi bozar).
+type UBLExtensions struct{}
+
+const placeholderNS = "urn:go-efatura:signature-placeholder"
+
+func (UBLExtensions) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	els := []xml.StartElement{
+		{Name: start.Name},
+		{Name: xml.Name{Local: "ext:UBLExtension"}},
+		{Name: xml.Name{Local: "ext:ExtensionContent"}},
+		{Name: xml.Name{Local: "sp:SignaturePlaceholder"}, Attr: []xml.Attr{
+			{Name: xml.Name{Local: "xmlns:sp"}, Value: placeholderNS},
+		}},
+	}
+	for _, el := range els {
+		if err := e.EncodeToken(el); err != nil {
+			return err
+		}
+	}
+	for i := len(els) - 1; i >= 0; i-- {
+		if err := e.EncodeToken(xml.EndElement{Name: els[i].Name}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-type UBLExtension struct {
-	ExtensionContent ExtensionContent `xml:"ext:ExtensionContent"`
+func (*UBLExtensions) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	return d.Skip()
 }
-
-// ExtensionContent is intentionally opaque: it carries the XAdES signature,
-// which only makes sense on the serialized document. Signing is a later
-// layer's job; parsing drops the signature bytes.
-type ExtensionContent struct{}
 
 type Period struct {
 	StartDate       string    `xml:"cbc:StartDate,omitempty"`

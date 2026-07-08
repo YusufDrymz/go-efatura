@@ -86,8 +86,7 @@ func TestBuildSatisFatura(t *testing.T) {
 	assert.Equal(t, "341.88", tot.TaxInclusiveAmount.Value.String())
 	assert.Equal(t, "341.88", tot.PayableAmount.Value.String())
 
-	// imza yeri ve taraflar
-	require.NotNil(t, inv.UBLExtensions) // XAdES placeholder
+	// imza blogu ve taraflar
 	require.Len(t, inv.Signatures, 1)
 	assert.Equal(t, "VKN_TCKN", inv.Signatures[0].ID.SchemeID)
 	assert.Equal(t, "9990000005", inv.Signatures[0].ID.Value)
