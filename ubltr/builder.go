@@ -175,7 +175,8 @@ func WithExchangeRate(rate Dec, date string) InvoiceOption {
 func (b *InvoiceBuilder) AddLine(l Line) { b.lines = append(b.lines, l) }
 
 // GIB fatura no: 3 haneli birim kodu + 13 haneli muteselsil (ilk 4'u yil).
-var invoiceIDRe = regexp.MustCompile(`^[A-Z0-9]{3}[0-9]{13}$`)
+// Regex schematron InvoiceIDCheck ile birebir (yil 20xx olmali).
+var invoiceIDRe = regexp.MustCompile(`^[A-Z0-9]{3}20[0-9]{11}$`)
 
 var hundred = decimal.NewFromInt(100)
 
