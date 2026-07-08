@@ -1,15 +1,16 @@
 # go-efatura
 
 GİB e-Fatura / e-Arşiv belgeleri (UBL-TR 1.2) için Go kütüphanesi. Belge
-modeli, parse ve deterministik XML üretimi, GİB iş kuralı doğrulaması ve
-XAdES imza; taşıma katmanı yolda.
+modeli, parse ve deterministik XML üretimi, GİB iş kuralı doğrulaması,
+XAdES imza ve SBDH zarf katmanı; entegratör taşıması yolda.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/YusufDrymz/go-efatura.svg)](https://pkg.go.dev/github.com/YusufDrymz/go-efatura)
 [![CI](https://github.com/YusufDrymz/go-efatura/actions/workflows/ci.yml/badge.svg)](https://github.com/YusufDrymz/go-efatura/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > Geliştirme sürüyor. v0.1 belge katmanı (builder + parse), v0.2 doğrulama,
-> v0.3 XAdES imza. Zarf ve entegratör taşıması sonraki sürümlerde.
+> v0.3 XAdES imza, v0.4 zarf + durum kodları. Entegratör/GİB taşıması
+> sonraki sürümde.
 
 ## Neden
 
@@ -101,6 +102,29 @@ res, err := sign.Verify(gelenFatura) // digest'ler + RSA; zincir kararı sizde
 fmt.Println(res.Certificate.Subject.CommonName, res.SigningTime)
 ```
 
+Zarflama ve gelen sistem yanıtını okuma:
+
+```go
+import "github.com/YusufDrymz/go-efatura/envelope"
+
+env, err := envelope.Build(envelope.Envelope{
+    Sender:    envelope.Party{Alias: "urn:mail:defaultgb@ornek.com.tr", VKN: "9990000005", Title: "Örnek A.Ş."},
+    Receiver:  envelope.Party{Alias: "urn:mail:defaultpk@alici.com.tr", VKN: "9990000013"},
+    Documents: [][]byte{signed}, // imzali fatura baytlari — bayt bayt korunur
+})
+zipped, err := envelope.Zip(env, zarfID) // GIB'e giden paket: tek xml, adi zarf ID
+
+opened, err := envelope.Open(gelenZarf) // belgeler ham dilimlenir, imza bozulmaz
+r, err := envelope.ParseResponse(opened.Documents[0]) // sistem yanıtı
+fmt.Println(r.Code, envelope.StatusText(r.Code), envelope.StatusSucceeded(r.Code))
+```
+
+Durum kodları (1000–1300) ve anlamları Ek-2 kılavuzundan gelir;
+`StatusSucceeded/Failed/Pending` sınıflandırması kılavuzdaki akışa göredir.
+Zarf açmada belgeler **yeniden serialize edilmez**, orijinal baytlarıyla
+dilimlenir — testlerdeki uçtan uca zincir (kur → imzala → zarfla → aç →
+imza doğrula) bunu garanti eder.
+
 İmza yapısı GİB'in resmi imzalı örnekleriyle birebir aynı iskelettedir
 (rsa-sha256, tek enveloped transform, SignedProperties referansı) ve
 testlerde gerçek bir GİB test mührü imzasının SignedInfo/SignedProperties
@@ -134,7 +158,7 @@ tabanlı olduğu için alan sırası sözleşmenin parçası). Tutarlar
 | v0.1 ✓ | `ubltr/` | belge modeli, builder, otomatik toplam/KDV hesabı, golden testler |
 | v0.2 ✓ | `validate/` | GİB schematron kurallarının kritik alt kümesi (kural ID referanslı) + XSD katmanı |
 | v0.3 ✓ | `sign/` | XAdES-BES imza + doğrulama, pluggable `Signer` |
-| v0.4 | `envelope/` | SBDH zarf + sistem yanıtı / durum kodları |
+| v0.4 ✓ | `envelope/` | SBDH zarf + zip paketleme + sistem yanıtı / durum kodları |
 | v0.5+ | `transport/`, `earsiv/` | entegratör adaptörleri, GİB doğrudan entegrasyon, e-Arşiv raporu |
 
 ## Kapsam ve duruş
@@ -161,9 +185,11 @@ schematron rules — every finding carries the schematron rule ID — plus an
 optional XSD check backed by the embedded official schema set (requires
 xmllint), and an XAdES-BES signing/verification layer mirroring the exact
 structure of GİB's official signed samples (tests verify a real GİB test
-seal signature with our canonicalization). Roadmap: SBDH envelopes (v0.4),
-integrator transports (v0.5+). Docs are in Turkish on purpose — the domain,
-its terminology and its regulator are Turkish.
+seal signature with our canonicalization), and an SBDH envelope layer with
+status codes — documents travel through envelopes byte-intact, so
+signatures survive the round trip. Roadmap: integrator transports (v0.5+).
+Docs are in Turkish on purpose — the domain, its terminology and its
+regulator are Turkish.
 
 ## License
 
