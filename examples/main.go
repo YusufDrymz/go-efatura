@@ -5,9 +5,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/YusufDrymz/go-efatura/ubltr"
+	"github.com/YusufDrymz/go-efatura/validate"
 )
 
 func main() {
@@ -59,6 +61,11 @@ func main() {
 	inv, err := b.Build()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// GIB is kurallari: bos donmesi beklenir, builder tutarli uretir
+	for _, issue := range validate.Invoice(inv) {
+		fmt.Fprintln(os.Stderr, issue)
 	}
 
 	out, err := inv.XML()

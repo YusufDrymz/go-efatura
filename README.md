@@ -1,16 +1,16 @@
 # go-efatura
 
 GİB e-Fatura / e-Arşiv belgeleri (UBL-TR 1.2) için Go kütüphanesi. Belge
-modeli, parse ve deterministik XML üretimi; doğrulama, imza ve taşıma
-katmanları yolda.
+modeli, parse ve deterministik XML üretimi + GİB iş kuralı doğrulaması;
+imza ve taşıma katmanları yolda.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/YusufDrymz/go-efatura.svg)](https://pkg.go.dev/github.com/YusufDrymz/go-efatura)
 [![CI](https://github.com/YusufDrymz/go-efatura/actions/workflows/ci.yml/badge.svg)](https://github.com/YusufDrymz/go-efatura/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> Geliştirme sürüyor. İlk hedef (v0.1) belge katmanı: builder ile fatura
-> kur (KDV dağılımı ve toplamlar otomatik), hazır XML'i parse et, yeniden
-> üret. İmza ve entegratör taşıması sonraki sürümlerde.
+> Geliştirme sürüyor. v0.1 belge katmanını (builder + parse), v0.2
+> doğrulama katmanını getirdi. İmza (XAdES) ve entegratör taşıması
+> sonraki sürümlerde.
 
 ## Neden
 
@@ -71,6 +71,31 @@ fmt.Println(inv.ProfileID, inv.InvoiceTypeCode) // TEMELFATURA SATIS
 fmt.Println(inv.LegalMonetaryTotal.PayableAmount.Value) // 17.88
 ```
 
+Göndermeden (veya gelen belgeyi işlemeden) önce GİB iş kurallarıyla doğrulama:
+
+```go
+import "github.com/YusufDrymz/go-efatura/validate"
+
+issues := validate.Invoice(inv)
+for _, is := range issues {
+    fmt.Println(is) // [hata] InvoicedQuantityCheck: unitCode niteliği zorunludur (InvoiceLine[1]/InvoicedQuantity)
+}
+if len(validate.Errors(issues)) == 0 {
+    // kurallardan geçti
+}
+
+// opsiyonel XSD katmanı: xmllint gerektirir, şema seti pakete gömülü
+if err := validate.XSD(xmlBytes); err != nil { ... }
+```
+
+Kuralların kaynağı GİB'in resmi schematron dosyalarıdır; her bulgu,
+schematron'daki kural ID'siyle gelir (`UBLVersionIDCheck`, `decimalCheck`,
+`WithholdingTaxTotalCheck`...). `GOEF-` önekli kurallar go-efatura'nın ek
+kurallarıdır: GİB schematron'u aritmetik tutarlılığı ve VKN/TCKN
+checksum'ını hiç denetlemez — toplam formülleri ve checksum'lar burada
+doğrulanır. Kapsam kritik fatura alt kümesidir; zarf ve e-İrsaliye kuralları
+sonraki fazlarda.
+
 Çalışan örnek: [`examples/`](examples/main.go). Yuvarlama tercihi: satır ve
 vergi tutarları 2 haneye half-up yuvarlanır, toplamlar yuvarlanmış
 değerlerden türetilir — GİB hiçbir kılavuzda yöntem tanımlamadığı için bu
@@ -85,8 +110,8 @@ tabanlı olduğu için alan sırası sözleşmenin parçası). Tutarlar
 
 | Sürüm | Katman | İçerik |
 |---|---|---|
-| v0.1 | `ubltr/` | belge modeli, builder, otomatik toplam/KDV hesabı, golden testler |
-| v0.2 | `validate/` | GİB schematron kurallarının kritik alt kümesi (kural ID referanslı) |
+| v0.1 ✓ | `ubltr/` | belge modeli, builder, otomatik toplam/KDV hesabı, golden testler |
+| v0.2 ✓ | `validate/` | GİB schematron kurallarının kritik alt kümesi (kural ID referanslı) + XSD katmanı |
 | v0.3 | `sign/` | XAdES imza, pluggable `Signer` |
 | v0.4 | `envelope/` | SBDH zarf + sistem yanıtı / durum kodları |
 | v0.5+ | `transport/`, `earsiv/` | entegratör adaptörleri, GİB doğrudan entegrasyon, e-Arşiv raporu |
@@ -107,13 +132,15 @@ tabanlı olduğu için alan sırası sözleşmenin parçası). Tutarlar
 ## English
 
 Go library for Turkish electronic invoices (GİB e-Fatura / e-Arşiv,
-UBL-TR 1.2 — a national customization of OASIS UBL 2.1). Currently ships
-the document layer: build invoices with automatic VAT distribution and
-totals, parse official documents, re-emit deterministic prefix-correct
-XML — all output is validated against the official XSD in tests. Roadmap:
-GİB business rule validation (v0.2), XAdES signing (v0.3), SBDH envelopes
-(v0.4), integrator transports (v0.5+). Docs are in Turkish on purpose —
-the domain, its terminology and its regulator are Turkish.
+UBL-TR 1.2 — a national customization of OASIS UBL 2.1). Ships the
+document layer (build invoices with automatic VAT distribution and totals,
+parse official documents, re-emit deterministic prefix-correct XML) and a
+validation layer implementing the critical subset of GİB's official
+schematron rules — every finding carries the schematron rule ID — plus an
+optional XSD check backed by the embedded official schema set (requires
+xmllint). Roadmap: XAdES signing (v0.3), SBDH envelopes (v0.4), integrator
+transports (v0.5+). Docs are in Turkish on purpose — the domain, its
+terminology and its regulator are Turkish.
 
 ## License
 
