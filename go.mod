@@ -3,6 +3,7 @@ module github.com/YusufDrymz/go-efatura
 go 1.24.4
 
 require (
+	github.com/YusufDrymz/go-trvalidate v0.1.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.11.1
 )
