@@ -8,9 +8,9 @@ katmanları yolda.
 [![CI](https://github.com/YusufDrymz/go-efatura/actions/workflows/ci.yml/badge.svg)](https://github.com/YusufDrymz/go-efatura/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> Geliştirme sürüyor. İlk hedef (v0.1) belge katmanı: UBL-TR fatura üret,
-> parse et, yeniden üret. Builder ve otomatik KDV/toplam hesabı bu sürümde
-> gelecek; imza ve entegratör taşıması sonraki sürümlerde.
+> Geliştirme sürüyor. İlk hedef (v0.1) belge katmanı: builder ile fatura
+> kur (KDV dağılımı ve toplamlar otomatik), hazır XML'i parse et, yeniden
+> üret. İmza ve entegratör taşıması sonraki sürümlerde.
 
 ## Neden
 
@@ -27,23 +27,49 @@ ortak ihtiyaç.
 go get github.com/YusufDrymz/go-efatura
 ```
 
-## Kullanım (bugünkü yüzey)
+## Kullanım
+
+Fatura kurma — satır tutarı, KDV dağılımı ve belge toplamları otomatik
+hesaplanır, VKN/TCKN checksum'ları
+[go-trvalidate](https://github.com/YusufDrymz/go-trvalidate) ile doğrulanır:
 
 ```go
 import "github.com/YusufDrymz/go-efatura/ubltr"
 
-data, _ := os.ReadFile("fatura.xml")
-inv, err := ubltr.ParseInvoice(data)
+b := ubltr.NewInvoice(
+    ubltr.WithProfile(ubltr.ProfileTemelFatura),
+    ubltr.WithType(ubltr.TypeSatis),
+    ubltr.WithID("ABC2026000000001"),
+    ubltr.WithIssueDate(time.Now()),
+    ubltr.WithSupplier(ubltr.PartyInfo{VKN: "9990000005", Name: "Örnek A.Ş.", TaxOffice: "Beşiktaş",
+        Address: ubltr.Address{CitySubdivisionName: "Beşiktaş", CityName: "İstanbul",
+            Country: ubltr.Country{Name: "Türkiye"}}}),
+    ubltr.WithCustomer(ubltr.PartyInfo{TCKN: "99900000074", FirstName: "Ali", FamilyName: "Yılmaz",
+        Address: ubltr.Address{CitySubdivisionName: "Çankaya", CityName: "Ankara",
+            Country: ubltr.Country{Name: "Türkiye"}}}),
+)
+b.AddLine(ubltr.Line{Name: "Danışmanlık", Qty: ubltr.D("2"), Unit: "C62",
+    UnitPrice: ubltr.D("1500"), VATRate: ubltr.D("20")})
+
+inv, err := b.Build() // hesap + dogrulama burada
 if err != nil {
     return err
 }
-fmt.Println(inv.ProfileID, inv.InvoiceTypeCode) // TEMELFATURA SATIS
-fmt.Println(inv.AccountingSupplierParty.Party.PartyIdentifications[0].ID.Value)
-fmt.Println(inv.LegalMonetaryTotal.PayableAmount.Value) // 17.88
-
-// yeniden üretim: GİB prefix'leriyle, deterministik
 out, err := inv.XML()
 ```
+
+Gelen faturayı parse etme:
+
+```go
+inv, err := ubltr.ParseInvoice(data)
+fmt.Println(inv.ProfileID, inv.InvoiceTypeCode) // TEMELFATURA SATIS
+fmt.Println(inv.LegalMonetaryTotal.PayableAmount.Value) // 17.88
+```
+
+Çalışan örnek: [`examples/`](examples/main.go). Yuvarlama tercihi: satır ve
+vergi tutarları 2 haneye half-up yuvarlanır, toplamlar yuvarlanmış
+değerlerden türetilir — GİB hiçbir kılavuzda yöntem tanımlamadığı için bu
+bilinçli ve dokümante bir tercihtir; resmi örneklerdeki değerlerle uyumludur.
 
 Model, UBL-TR kılavuzlarındaki eleman sırasını birebir taşır (XSD sequence
 tabanlı olduğu için alan sırası sözleşmenin parçası). Tutarlar
