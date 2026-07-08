@@ -1,6 +1,7 @@
 package ubltr
 
 import (
+	"bytes"
 	"encoding/xml"
 
 	"github.com/shopspring/decimal"
@@ -16,6 +17,18 @@ func (d Dec) MarshalText() ([]byte, error) {
 		return []byte(d.StringFixed(-exp)), nil
 	}
 	return []byte(d.String()), nil
+}
+
+// UnmarshalText bas/son bosluk toleransli: GIB'in kendi ornekleri "786.90 "
+// gibi degerler iceriyor ve resmi schematron regex'i de bosluga izin veriyor.
+// Bos icerik sifir sayilir (bos eleman == yok).
+func (d *Dec) UnmarshalText(text []byte) error {
+	text = bytes.TrimSpace(text)
+	if len(text) == 0 {
+		d.Decimal = decimal.Decimal{}
+		return nil
+	}
+	return d.Decimal.UnmarshalText(text)
 }
 
 // Amount is a monetary value with the currencyID attribute. currencyID is
