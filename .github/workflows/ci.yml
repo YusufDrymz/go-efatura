@@ -16,5 +16,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
+      - run: sudo apt-get install -y libxml2-utils # xmllint, xsd testi icin
       - run: go vet ./...
       - run: go test -race -cover ./...
