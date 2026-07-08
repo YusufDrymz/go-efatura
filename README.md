@@ -53,10 +53,15 @@ b.AddLine(ubltr.Line{Name: "Danışmanlık", Qty: ubltr.D("2"), Unit: "C62",
 
 inv, err := b.Build() // hesap + dogrulama burada
 if err != nil {
-    return err
+    return err // birden fazla hata errors.Join ile birlikte doner
 }
 out, err := inv.XML()
 ```
+
+`Build` eksik/geçersiz her alanı ayrı raporlar (profil, fatura no biçimi,
+checksum, adres, kur, istisna gerekçesi...) ve hepsini tek seferde döner —
+tek tek düzeltip yeniden denemek gerekmez. Üretilen XML, testlerde GİB'in
+resmi XSD'sine karşı `xmllint` ile doğrulanır (`ubltr/testdata/xsd/`).
 
 Gelen faturayı parse etme:
 
@@ -95,17 +100,20 @@ tabanlı olduğu için alan sırası sözleşmenin parçası). Tutarlar
   (`ubltr/testdata/gib/`). Gerçek mükellef verisi yoktur; sentetik
   fixture'larda VKN/TCKN değerleri uydurma ama checksum-geçerlidir.
 - İmza katmanı çekirdeğe bulaşmaz: entegratör kullanan çoğunluk belgeyi
-  imzasız üretir, imzayı entegratör atar.
+  imzasız üretir, imzayı entegratör atar. GİB XSD'si `UBLExtensions`'ı
+  zorunlu kıldığı için imzasız belgede şema-geçerli bir placeholder yazılır;
+  imzacı bunu XAdES içeriğiyle değiştirir.
 
 ## English
 
 Go library for Turkish electronic invoices (GİB e-Fatura / e-Arşiv,
 UBL-TR 1.2 — a national customization of OASIS UBL 2.1). Currently ships
-the document layer: parse official invoices and re-emit deterministic,
-prefix-correct XML. Roadmap: builder with tax math (v0.1), GİB business
-rule validation (v0.2), XAdES signing (v0.3), SBDH envelopes (v0.4),
-integrator transports (v0.5+). Docs are in Turkish on purpose — the
-domain, its terminology and its regulator are Turkish.
+the document layer: build invoices with automatic VAT distribution and
+totals, parse official documents, re-emit deterministic prefix-correct
+XML — all output is validated against the official XSD in tests. Roadmap:
+GİB business rule validation (v0.2), XAdES signing (v0.3), SBDH envelopes
+(v0.4), integrator transports (v0.5+). Docs are in Turkish on purpose —
+the domain, its terminology and its regulator are Turkish.
 
 ## License
 
